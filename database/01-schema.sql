@@ -38,3 +38,34 @@ CREATE TABLE Member (
 
 )ENGINE=InnoDB;
 
+
+CREATE TABLE Member_Phone (
+    Member_ID VARCHAR(20) NOT NULL,
+    Phone     VARCHAR(20) NOT NULL,
+    CONSTRAINT pk_member_phone
+        PRIMARY KEY (Member_ID, Phone),
+    CONSTRAINT fk_member_phone_has_phone FOREIGN KEY (Member_ID) REFERENCES Member (Member_ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT check_Memberphonelength
+        CHECK (CHAR_LENGTH(Phone) BETWEEN 8 AND 20)
+) ENGINE=InnoDB;
+
+
+CREATE TABLE Staff (
+    Staff_ID VARCHAR (20) NOT NULL, -- PK
+    Supervisor_ID VARCHAR (20) NULL DEFAULT  NULL, -- FK
+    Full_Name VARCHAR (100) NOT NULL,
+    Position VARCHAR(50)  NOT NULL DEFAULT  'Librarian',
+    Email VARCHAR(200) NOT NULL,
+    CONSTRAINT PK_Staff PRIMARY KEY (Staff_ID),
+    CONSTRAINT unique_staffemail UNIQUE (Email),
+    CONSTRAINT FK_staffSupervisor FOREIGN KEY (Supervisor_ID) REFERENCES Staff (Staff_ID)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT check_staffemailformat CHECK (Email LIKE '%_@__%.__%')
+
+)ENGINE=InnoDB;
+
+
+
+
+
