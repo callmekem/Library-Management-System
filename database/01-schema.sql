@@ -17,7 +17,8 @@ CREATE TABLE Member_Category (
     Loan_Period INT NOT NULL DEFAULT 14,
     CONSTRAINT PK_Member_Category PRIMARY KEY (Member_Type_ID),
     CONSTRAINT unique_Membr_Category_TypeName UNIQUE(Type_Name), 
-    CONSTRAINT check_MemberCategoryLimit CHECK (Borrowing_Limit BETWEEN 1 AND  20 AND Loan_Period BETWEEN 1 AND 90) 
+    CONSTRAINT check_MemberCategoryLimit CHECK (Borrowing_Limit BETWEEN 1 AND  20 AND Loan_Period BETWEEN 1 AND 90)  -- moi vai loai thanh vienn co the muon tu 1 den 20 quyen sach 
+    -- thoi han la tu 1 den 90 ngay
 )ENGINE=InnoDB;
 
 CREATE TABLE Member (
@@ -64,6 +65,45 @@ CREATE TABLE Staff (
     CONSTRAINT check_staffemailformat CHECK (Email LIKE '%_@__%.__%')
 
 )ENGINE=InnoDB;
+
+CREATE TABLE  Loan_Transaction (
+    Loan_ID VARCHAR(20) NOT NULL ,
+    Member_ID VARCHAR(20) NOT NULL,
+    Staff_ID VARCHAR(20) NOT NULL,
+    Borrow_Date DATE NOT NULL DEFAULT (CURRENT_DATE),
+    Due_Date DATE NOT NULL, 
+    Total_Copies_Borrowed int NOT NULL DEFAULT 1,
+    CONSTRAINT PK_Loantransaction PRIMARY KEY (Loan_ID),
+    CONSTRAINT FK_loantransactionMakeMember FOREIGN KEY (Member_ID) REFERENCES MEMBER (Member_ID)
+    ON DELETE RESTRICT ON UPDATE CASCADE ,
+    CONSTRAINT FK_loanhandlesStaffID FOREIGN KEY  (Staff_ID) REFERENCES Staff (Staff_ID)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT check_loantransactionDate  CHECK (Due_Date >=Borrow_Date), -- ngay hen tra luon dien ra sau hoac cung ngay muon
+    CONSTRAINT check_loantransaction_totalcopies CHECK (Total_Copies_Borrowed BETWEEN 1 AND 20)
+)ENGINE=InnoDB;
+
+CREATE TABLE Loan_Detail ( 
+    Loan_ID VARCHAR (20) NOT NULL,
+    Detail_ID VARCHAR(20) NOT NULL,
+    Book_ID VARCHAR(20) NOT NULL,
+    Copy_ID VARCHAR (20) NOT NULL,
+    Return_DATE DATE  NULL DEFAULT NULL ,
+    Renewal_Count INT NOT NULL DEFAULT 0,
+    Payment_Status VARCHAR (20) NOT NULL DEFAULT 'NONE',
+    Fine_Amount DECIMAL (10,2)  NOT NULL DEFAULT 0.00, -- tien phat ma ng doc phai nop
+    CONSTRAINT PK_LoanDetail PRIMARY KEY (Loan_ID,Detail_ID),
+    CONSTRAINT FK_loanDetai_lbelongto_loanID FOREIGN KEY (Loan_ID) REFERENCES Loan_Transaction (Loan_ID)
+    ON DELETE CASCADE ON UPDATE CASCADE ,
+    CONSTRAINT unique_loandetail_copy_per_loan UNIQUE (Loan_ID,Book_ID,Copy_ID), -- dam bao trong 1 lan muon thi cuon sach vat ly cu the xuat hien dung 1 lan
+    CONSTRAINT FK_loandetail_borrwed_BookCopy FOREIGN KEY (Book_ID ,Copy_ID) REFERENCES Book_Copy(Book_ID,Copy_ID)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT check_loandetail_renewalcount CHECK (Renewal_Count BETWEEN 0 AND 5),
+    CONSTRAINT check_loandetail_fine_amount CHECK (Fine_Amount >=0.00),
+    CONSTRAINT check_loandetail_paymentstatus CHECK (Payment_Status IN ('NONE', 'UNPAID','PAID', 'Waived' ) AND (Fine_Amount =0.00 AND Payment_Status='NONE') OR (Fine_Amount >0.00 AND Payment_Status IN ('UNPAID','PAID','Waived')))
+
+)ENGINE=InnoDB;
+
+
 
 
 
