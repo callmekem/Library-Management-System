@@ -1,8 +1,3 @@
-
-
-
-
-
 INSERT INTO Member_Category (Member_Type_ID,Type_Name,Borrowing_Limit,Loan_Period) VALUES
 ('MC01', 'Undergraduate Student', 5, 14),
 ('MC02', 'Postgraduate Student', 8, 21),
@@ -167,7 +162,7 @@ INSERT INTO Staff (Staff_ID,Supervisor_ID,Full_Name,Position,Email) VALUES
 ('S14', 'S04', 'Cao Thai Son', 'Acquisitions Specialist', 'ctson@hcmiu.edu.vn'),
 ('S15', 'S02', 'Huynh Thuc Khang', 'IT Systems Librarian', 'htkhang@hcmiu.edu.vn');
 
-INSERT INTO Loan_Transaction (Loan_ID,Member_ID,Staff_ID,Borrow_Date,Due_Date) VALUES 
+INSERT INTO Loan_Transaction (Loan_ID,Member_ID,Staff_ID,Borrow_Date,Due_Date,Total_Copies_Borrowed) VALUES 
 ('L01', 'M01', 'S05', '2026-01-15', '2026-01-29', 2),
 ('L02', 'M02', 'S05', '2026-02-10', '2026-03-03', 2),
 ('L03', 'M01', 'S06', '2026-09-01', '2026-09-15', 2),
@@ -226,7 +221,7 @@ INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, S
 ('RES14', 'M14', 'B14', '2026-10-14', 'Pending'),
 ('RES15', 'M15', 'B15', '2026-10-15', 'Completed');
 
-INSERT INTO Loan_Detail (Loan_ID,Detail_ID,Book_ID,Copy_ID,Return_Date,Renewal_Count,Payment_Stauts,Fine_Amount) VALUES
+INSERT INTO Loan_Detail (Loan_ID,Detail_ID,Book_ID,Copy_ID,Return_Date,Renewal_Count,Payment_Status,Fine_Amount) VALUES
 ('L01', 'D01', 'B01', 'C01', '2026-01-28', 0, 'None',   0.00),
 ('L01', 'D02', 'B11', 'C01', '2026-01-28', 0, 'None',   0.00),
 ('L02', 'D01', 'B01', 'C02', '2026-03-01', 0, 'None',   0.00),
@@ -235,15 +230,13 @@ INSERT INTO Loan_Detail (Loan_ID,Detail_ID,Book_ID,Copy_ID,Return_Date,Renewal_C
 ('L03', 'D02', 'B03', 'C02', NULL,         0, 'Unpaid', 45000.00),
 ('L04', 'D01', 'B04', 'C01', '2026-04-12', 0, 'Unpaid', 40000.00),
 ('L05', 'D01', 'B05', 'C01', '2026-05-04', 0, 'Unpaid', 40000.00),
-('L06', 'D01', 'B06', 'C02', NULL,         0, 'Unpaid', 25000.00),
+('L06', 'D01', 'B06', 'C01', NULL,         0, 'Unpaid', 25000.00),
 ('L07', 'D01', 'B07', 'C01', '2026-06-28', 0, 'None',   0.00),
 ('L08', 'D01', 'B08', 'C01', '2026-07-25', 1, 'Unpaid', 50000.00),
-('L09', 'D01', 'B09', 'C02', NULL,         0, 'Unpaid', 40000.00),
+('L09', 'D01', 'B09', 'C01', NULL,         0, 'Unpaid', 40000.00),
 ('L10', 'D01', 'B10', 'C01', '2026-08-05', 0, 'Paid',   25000.00),
 ('L11', 'D01', 'B12', 'C01', NULL,         0, 'Unpaid', 35000.00),
 ('L12', 'D01', 'B01', 'C01', '2026-09-10', 0, 'None',   0.00),
 ('L13', 'D01', 'B02', 'C01', '2026-09-06', 0, 'Waived', 25000.00),
 ('L14', 'D01', 'B03', 'C01', '2026-09-04', 0, 'None',   0.00),
 ('L15', 'D01', 'B13', 'C01', NULL,         0, 'None',   0.00);
-
-
