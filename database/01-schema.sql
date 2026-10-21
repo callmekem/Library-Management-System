@@ -7,9 +7,18 @@ CREATE DATABASE Library_Management_db
     COLLATE utf8mb4_unicode_ci;
 
 USE library_management_db;
+--  BR01:Aphysical book copy (Book_Copy) cannot exist independently being associated with a parent book title (Book).
 
+--  BR02: Book reservations (Reservation) are placed on a specific Book (title) ,whereas active loans (Loan_Detail) are tracked by physical book copies(Book_Copy).
 
+-- BR03: Member borrowing privileges (limits and loan durations) are strictly governed by their membership category (Member_Category).
 
+-- BR04: Staff members operate under an organizational hierarchy where a staff member may report to a designated supervisor (Staff self-reference).
+
+-- BR05: Overdue books incur fines which are tracked for each specific borrowed copy in the Loan_Detail table, along with their payment statuses
+
+-- 1 Member category 
+ -- Enforces BR03: Defines borrowing limits and loan durations per tier
 CREATE TABLE Member_Category (
     Member_Type_ID VARCHAR(20) NOT NULL,
     Type_Name VARCHAR(20) NOT NULL,
@@ -20,6 +29,9 @@ CREATE TABLE Member_Category (
     CONSTRAINT check_MemberCategoryLimit CHECK (Borrowing_Limit BETWEEN 1 AND  20 AND Loan_Period BETWEEN 1 AND 90)  -- moi vai loai thanh vienn co the muon tu 1 den 20 quyen sach 
     -- thoi han la tu 1 den 90 ngay
 )ENGINE=InnoDB;
+
+-- 2. Member
+-- Enforces BR03: Every member belongs to a valid Member_Category
 
 CREATE TABLE Member (
     Member_ID VARCHAR (20) NOT NULL, -- PK
@@ -32,13 +44,14 @@ CREATE TABLE Member (
     CONSTRAINT PK_Member PRIMARY KEY (Member_ID),
     CONSTRAINT unique_MemberEmail UNIQUE (Email),
     CONSTRAINT unique_MemberIdentityCard UNIQUE (Identity_Card),
-    CONSTRAINT FK_MemberTypeID FOREIGN KEY (Member_Type_ID) REFERENCES Member_Category (Member_Type_ID)
+    CONSTRAINT FK_Memberbelongto_category FOREIGN KEY (Member_Type_ID) REFERENCES Member_Category (Member_Type_ID)
     ON DELETE RESTRICT ON UPDATE CASCADE, -- không cho xóa cột Member_Type_ID ở bản cha khi có bản con tham chiếu đến và có thể update thay đổi được
     CONSTRAINT check_Emailformat CHECK (Email LIKE '%_@__%.__%'),
     CONSTRAINT check_Member_AccountStatus CHECK (Account_Status IN('Acitve','Suspended','Expired','Locked'))
 
 )ENGINE=InnoDB;
-
+-- 3. Member_Phone
+-- Resolves multivalued attribute Phone of Member
 
 CREATE TABLE Member_Phone (
     Member_ID VARCHAR(20) NOT NULL,
@@ -51,6 +64,8 @@ CREATE TABLE Member_Phone (
         CHECK (CHAR_LENGTH(Phone) BETWEEN 8 AND 20)
 ) ENGINE=InnoDB;
 
+-- 4. Staff
+-- Enforces BR04: Organizational hierarchy via recursive self-referencing FK
 
 CREATE TABLE Staff (
     Staff_ID VARCHAR (20) NOT NULL, -- PK
@@ -65,6 +80,8 @@ CREATE TABLE Staff (
     CONSTRAINT check_staffemailformat CHECK (Email LIKE '%_@__%.__%')
 
 )ENGINE=InnoDB;
+-- Loan_Transaction
+-- Header table for a borrowing transaction handled by a Staff member.
 
 CREATE TABLE  Loan_Transaction (
     Loan_ID VARCHAR(20) NOT NULL ,
@@ -81,6 +98,9 @@ CREATE TABLE  Loan_Transaction (
     CONSTRAINT check_loantransactionDate  CHECK (Due_Date >=Borrow_Date), -- ngay hen tra luon dien ra sau hoac cung ngay muon
     CONSTRAINT check_loantransaction_totalcopies CHECK (Total_Copies_Borrowed BETWEEN 1 AND 20)
 )ENGINE=InnoDB;
+
+--  Loan_Detail (Weak entity)
+-- Enforces BR02 & BR05: Links to physical copy (Book_ID, Copy_ID) and tracks fines
 
 CREATE TABLE Loan_Detail ( 
     Loan_ID VARCHAR (20) NOT NULL,
@@ -102,6 +122,19 @@ CREATE TABLE Loan_Detail (
     CONSTRAINT check_loandetail_paymentstatus CHECK (Payment_Status IN ('NONE', 'UNPAID','PAID', 'Waived' ) AND (Fine_Amount =0.00 AND Payment_Status='NONE') OR (Fine_Amount >0.00 AND Payment_Status IN ('UNPAID','PAID','Waived')))
 
 )ENGINE=InnoDB;
+
+-- Queries the database must answer
+-- The copies of a title currently available. 
+-- The loans of one member that are overdue today.
+-- The ten most borrowed titles this year.
+-- Members who have borrowed every title by a given author.
+-- The total fines outstanding per member category
+
+-- Indexes for Circulation & Fine queries (query 2 ,3 ,5)
+CREATE INDEX idx_loan_tx_member_due       ON Loan_Transaction (Member_ID, Due_Date);
+CREATE INDEX idx_loan_detail_return_date  ON Loan_Detail (Return_Date);
+CREATE INDEX idx_loan_tx_borrow_date      ON Loan_Transaction (Borrow_Date);
+CREATE INDEX idx_loan_detail_payment_fine ON Loan_Detail (Payment_Status, Fine_Amount);
 
 
 
