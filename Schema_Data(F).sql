@@ -21,7 +21,7 @@ USE library_management_db;
  -- Enforces BR03: Defines borrowing limits and loan durations per tier
 CREATE TABLE Member_Category (
     Member_Type_ID VARCHAR(20) NOT NULL,
-    Type_Name VARCHAR(20) NOT NULL,
+    Type_Name VARCHAR(50) NOT NULL,
     Borrowing_Limit INT NOT NULL DEFAULT 3,
     Loan_Period INT NOT NULL DEFAULT 14,
     CONSTRAINT PK_Member_Category PRIMARY KEY (Member_Type_ID),
@@ -47,7 +47,7 @@ CREATE TABLE Member (
     CONSTRAINT FK_Memberbelongto_category FOREIGN KEY (Member_Type_ID) REFERENCES Member_Category (Member_Type_ID)
     ON DELETE RESTRICT ON UPDATE CASCADE, -- không cho xóa cột Member_Type_ID ở bản cha khi có bản con tham chiếu đến và có thể update thay đổi được
     CONSTRAINT check_Emailformat CHECK (Email LIKE '%_@__%.__%'),
-    CONSTRAINT check_Member_AccountStatus CHECK (Account_Status IN('Acitve','Suspended','Expired','Locked'))
+    CONSTRAINT check_Member_AccountStatus CHECK (Account_Status IN('Active','Suspended','Expired','Locked'))
 
 )ENGINE=InnoDB;
 -- 3. Member_Phone
@@ -63,6 +63,7 @@ CREATE TABLE Member_Phone (
     CONSTRAINT check_Memberphonelength
         CHECK (CHAR_LENGTH(Phone) BETWEEN 8 AND 20)
 ) ENGINE=InnoDB;
+
 CREATE TABLE Category (
     Category_ID VARCHAR(50) PRIMARY KEY,
     Category_Name VARCHAR(100) NOT NULL UNIQUE,
@@ -199,3 +200,4 @@ CREATE TABLE Loan_Detail (
     CONSTRAINT check_loandetail_paymentstatus CHECK (Payment_Status IN ('NONE', 'UNPAID','PAID', 'Waived' ) AND (Fine_Amount =0.00 AND Payment_Status='NONE') OR (Fine_Amount >0.00 AND Payment_Status IN ('UNPAID','PAID','Waived')))
 
 )ENGINE=InnoDB;
+
