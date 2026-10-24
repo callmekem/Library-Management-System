@@ -41,7 +41,7 @@ CREATE TABLE Member_Category (
     CONSTRAINT unique_Member_Category_TypeName
         UNIQUE (Type_Name),
     CONSTRAINT check_MemberCategoryLimit
-        CHECK (Borrowing_Limit BETWEEN 1 AND 20 AND Loan_Period BETWEEN 1 AND 90)
+        CHECK (Borrowing_Limit BETWEEN 1 AND 20 AND Loan_Period BETWEEN 1 AND 90) -- each Member category can borrow difference limit and difference loan
 ) ENGINE=InnoDB;
 
 -- table 2  Member
@@ -107,7 +107,7 @@ CREATE TABLE Category (
 ) ENGINE=InnoDB;
 
 
--- table 5  Truong Son] Publisher
+-- table 5  Publisher
 -- Book publishing house master table
 
 CREATE TABLE Publisher (
