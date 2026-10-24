@@ -2,6 +2,8 @@
 -- PROJECT:     Topic 22 - Library Management System
 -- DBMS:        MySQL 8.4 LTS | Tool: MySQL Workbench
 
+
+
 SET NAMES utf8mb4;
 SET SESSION sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
@@ -24,6 +26,21 @@ USE library_management_db;
 --       member may report to a designated supervisor (Staff self-reference).
 -- BR05: Overdue books incur fines which are tracked for each specific borrowed
 --       copy in the Loan_Detail table, along with their payment statuses.
+
+--         Where each rule is enforced
+--   BR01  Book_Copy.Book_ID NOT NULL, PK (Book_ID, Copy_ID),
+--         FK fk_copy_book ON DELETE CASCADE (copies go with their title)
+--   BR02  Reservation: FK fk_res_book (title level, no copy column);
+--         Loan_Detail: composite FK FK_loandetail_borrowed_BookCopy (copy level)
+--   BR03  Member.Member_Type_ID NOT NULL + FK; CHECK check_MemberCategoryLimit;
+--         Trigger 1 (loan period and limit at checkout), Trigger 2 (changed
+--         due date or member), Trigger 3 (limit on the copies really out),
+--         Trigger 4 (loan line re-opened or moved)
+--   BR04  FK FK_staffSupervisor (NULL = top of the hierarchy);
+--         Triggers 5 and 6 (nobody supervises themself, no cycle)
+--   BR05  Fine_Amount + Payment_Status in every Loan_Detail row; CHECK
+--         check_loandetail_fine_amount, check_loandetail_paymentstatus;
+--         Triggers 3 and 4 (a copy returned late carries a fine)
 
 
 
@@ -103,7 +120,10 @@ CREATE TABLE Category (
     CONSTRAINT pk_category
         PRIMARY KEY (Category_ID),
     CONSTRAINT uq_category_name
-        UNIQUE (Category_Name)
+        UNIQUE (Category_Name),
+    -- [S1] Every table carries a CHECK (section 2.2): a category needs a name.
+    CONSTRAINT chk_category_name_not_blank
+        CHECK (CHAR_LENGTH(TRIM(Category_Name)) > 0)
 ) ENGINE=InnoDB;
 
 
@@ -126,7 +146,7 @@ CREATE TABLE Publisher (
 ) ENGINE=InnoDB;
 
 
--- [table 6  Author
+-- table 6  Author
 -- Book author master table
 
 CREATE TABLE Author (
@@ -134,7 +154,11 @@ CREATE TABLE Author (
     Author_Name VARCHAR(150) NOT NULL,
     Biography   TEXT         NULL,
     CONSTRAINT pk_author
-        PRIMARY KEY (Author_ID)
+        PRIMARY KEY (Author_ID),
+    -- [S2] An author needs a name. Author_Name is not UNIQUE on purpose:
+    -- two different authors may share a name.
+    CONSTRAINT chk_author_name_not_blank
+        CHECK (CHAR_LENGTH(TRIM(Author_Name)) > 0)
 ) ENGINE=InnoDB;
 
 -- table 7  Book
@@ -207,11 +231,12 @@ CREATE TABLE Staff (
         PRIMARY KEY (Staff_ID),
     CONSTRAINT unique_staffemail
         UNIQUE (Email),
+
     CONSTRAINT FK_staffSupervisor
         FOREIGN KEY (Supervisor_ID)
         REFERENCES Staff (Staff_ID)
         ON DELETE SET NULL
-        ON UPDATE CASCADE,
+        ON UPDATE RESTRICT,
     CONSTRAINT check_staffemailformat
         CHECK (Email LIKE '%_@__%.__%')
 ) ENGINE=InnoDB;
@@ -268,8 +293,6 @@ CREATE TABLE Book_Copy (
 
 -- table 12  Reservation
 -- Enforces BR02: Reservations reference Book_ID (title level), whereas
--- Loan_Detail references (Book_ID, Copy_ID) (physical copy level).
-
 
 CREATE TABLE Reservation (
     Reservation_ID   VARCHAR(20) NOT NULL,
@@ -294,7 +317,7 @@ CREATE TABLE Reservation (
 ) ENGINE=InnoDB;
 
 
--- [Table 13 - Dev 1: Quang Huy] Loan_Detail (Weak Entity Set)
+-- table 13  Loan_Detail (Weak Entity Set)
 -- Enforces BR02 & BR05: Links to physical copy (Book_ID, Copy_ID) & tracks fines
 
 CREATE TABLE Loan_Detail (
@@ -335,16 +358,16 @@ CREATE TABLE Loan_Detail (
 ) ENGINE=InnoDB;
 
 
- -- Indexes for Circulation & Fine queries (Queries 2, 3 & 5)
-CREATE INDEX index_loanTransaction_member_due ON Loan_Transaction (Member_ID, Due_Date);
-CREATE INDEX idx_loan_detail_return_date      ON Loan_Detail (Return_Date);
-CREATE INDEX idx_loantransaction_borrow_date  ON Loan_Transaction (Borrow_Date);
-CREATE INDEX idx_loan_detail_payment_fine     ON Loan_Detail (Payment_Status, Fine_Amount);
-
- -- Indexes for Catalogue & Author queries (Queries 1 & 4)
-CREATE INDEX idx_book_title                   ON Book (Title);
-CREATE INDEX idx_book_copy_status             ON Book_Copy (Book_ID, Status);
-CREATE INDEX idx_author_name                  ON Author (Author_Name);
+-- [S5] Each index and the Topic 22 query it helps (copy this into the report)
+-- Circulation and fines
+CREATE INDEX index_loanTransaction_member_due ON Loan_Transaction (Member_ID, Due_Date);    -- Q2 loans of one member overdue today
+CREATE INDEX idx_loan_detail_return_date      ON Loan_Detail (Return_Date);                 -- Q2 copies not returned (Return_Date IS NULL)
+CREATE INDEX idx_loantransaction_borrow_date  ON Loan_Transaction (Borrow_Date);            -- Q3 ten most borrowed titles this year (year as a date range)
+CREATE INDEX idx_loan_detail_payment_fine     ON Loan_Detail (Payment_Status, Fine_Amount); -- Q5 fines outstanding per member category
+-- Catalogue and authors
+CREATE INDEX idx_book_title                   ON Book (Title);                              -- Q1 find a title by name (prefix search)
+CREATE INDEX idx_book_copy_status             ON Book_Copy (Book_ID, Status);               -- Q1 copies of a title currently available
+CREATE INDEX idx_author_name                  ON Author (Author_Name);                      -- Q4 titles by a given author
 
 
 
@@ -425,7 +448,7 @@ INSERT INTO Category (Category_ID, Category_Name, Description) VALUES
 INSERT INTO Publisher (Publisher_ID, Publisher_Name, Address, Contact_Email) VALUES
 ('PUB01', 'MIT Press', 'Cambridge, MA, USA', 'info@mitpress.mit.edu'),
 ('PUB02', 'Prentice Hall', 'Upper Saddle River, NJ, USA', 'contact@prenticehall.com'),
-('PUB03', 'O Reilly Media', 'Sebastopol, CA, USA', 'support@oreilly.com'),
+('PUB03', 'O''Reilly Media', 'Sebastopol, CA, USA', 'support@oreilly.com'),  -- [D1] real name; '' is one apostrophe
 ('PUB04', 'Springer', 'Berlin, Germany', 'customerservice@springer.com'),
 ('PUB05', 'Elsevier', 'Amsterdam, Netherlands', 'info@elsevier.com'),
 ('PUB06', 'Wiley', 'Hoboken, NJ, USA', 'info@wiley.com'),
@@ -543,7 +566,7 @@ INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes
 ('B01', 'C02', 'Shelf A - Row 1', 'Available', 'New'),
 ('B02', 'C01', 'Shelf A - Row 2', 'Available', 'Cover slightly bent'),
 ('B02', 'C02', 'Shelf A - Row 2', 'Borrowed',  'Currently checked out on Loan L03'),
-('B03', 'C01', 'Shelf B - Row 1', 'Reserved',  'Held at desk for reservation RES03'),
+('B03', 'C01', 'Shelf B - Row 1', 'Reserved',  'Held at desk for reservation RES07'),  -- [D2] RES07 is the Confirmed one
 ('B03', 'C02', 'Shelf B - Row 1', 'Borrowed',  'Currently checked out on Loan L03'),
 ('B04', 'C01', 'Shelf B - Row 2', 'Available', 'Good condition'),
 ('B04', 'C02', 'Shelf B - Row 2', 'Lost',      'Reported missing in 2025'),
@@ -552,7 +575,7 @@ INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes
 ('B06', 'C02', 'Shelf C - Row 2', 'Borrowed',  'Currently checked out on Loan L06'),
 ('B07', 'C01', 'Shelf D - Row 1', 'Available', 'New'),
 ('B08', 'C01', 'Shelf D - Row 2', 'Available', 'Good condition'),
-('B09', 'C01', 'Shelf E - Row 1', 'Reserved',  'Held at desk for reservation RES09'),
+('B09', 'C01', 'Shelf E - Row 1', 'Available', 'Good condition'),                     -- [D2] never lent, so B09 was never fully on loan
 ('B09', 'C02', 'Shelf E - Row 1', 'Borrowed',  'Currently checked out on Loan L09'),
 ('B10', 'C01', 'Shelf E - Row 2', 'Available', 'Cover slightly worn'),
 ('B11', 'C01', 'Shelf F - Row 1', 'Available', 'Good condition'),
@@ -561,38 +584,52 @@ INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes
 ('B14', 'C01', 'Shelf G - Row 1', 'Available', 'Brand New - Never Borrowed'),
 ('B15', 'C01', 'Shelf G - Row 2', 'Available', 'Brand New - Never Borrowed');
 
--- Reservation (15 rows)
+-- Reservation (15 rows)                                                     [D3]
+-- Rewritten so that every row agrees with Book_Copy and Loan_Detail:
+--   * each reservation was placed while no copy of the title could be lent
+--     (every lendable copy out on loan or held for an earlier reservation),
+--     as Topic 22 describes: "reservations for a title that is fully on loan";
+--   * Confirmed = a copy of that title is held at the desk ('Reserved');
+--   * Pending rows are on titles with no Available copy today (2026-10-24);
+--   * Cancelled = not collected or withdrawn; the copy went back on the shelf;
+--   * no row is Completed: no loan in Loan_Detail starts after a time when
+--     every copy of its title was out, so no loan can be a reservation pick-up.
+-- Only Active members reserve. These points describe the sample data; the
+-- database does not enforce them (they are not among BR01-BR05).
 INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, Status) VALUES
-('RES01', 'M01', 'B01', '2026-10-01', 'Pending'),
-('RES02', 'M02', 'B02', '2026-10-02', 'Confirmed'),
-('RES03', 'M03', 'B03', '2026-10-03', 'Completed'),
-('RES04', 'M04', 'B04', '2026-10-04', 'Cancelled'),
-('RES05', 'M05', 'B05', '2026-10-05', 'Pending'),
-('RES06', 'M06', 'B06', '2026-10-06', 'Confirmed'),
-('RES07', 'M07', 'B07', '2026-10-07', 'Completed'),
-('RES08', 'M08', 'B08', '2026-10-08', 'Pending'),
-('RES09', 'M09', 'B09', '2026-10-09', 'Confirmed'),
-('RES10', 'M10', 'B10', '2026-10-10', 'Completed'),
-('RES11', 'M11', 'B11', '2026-10-11', 'Cancelled'),
-('RES12', 'M12', 'B12', '2026-10-12', 'Pending'),
-('RES13', 'M13', 'B13', '2026-10-13', 'Confirmed'),
-('RES14', 'M14', 'B14', '2026-10-14', 'Pending'),
-('RES15', 'M15', 'B15', '2026-10-15', 'Completed');
+('RES01', 'M11', 'B11', '2026-01-20', 'Cancelled'),  -- B11-C01 out on L01
+('RES02', 'M04', 'B04', '2026-03-20', 'Cancelled'),  -- B04-C01 out on L04, B04-C02 lost
+('RES03', 'M07', 'B05', '2026-04-20', 'Cancelled'),  -- B05-C01 out on L05
+('RES04', 'M10', 'B07', '2026-06-01', 'Cancelled'),  -- B07-C01 out on L07
+('RES05', 'M03', 'B08', '2026-07-01', 'Cancelled'),  -- B08-C01 out on L08
+('RES06', 'M13', 'B10', '2026-07-20', 'Cancelled'),  -- B10-C01 out on L10
+('RES07', 'M02', 'B03', '2026-09-02', 'Confirmed'),  -- both B03 copies out; C01 back 2026-09-04, held at desk
+('RES08', 'M12', 'B02', '2026-09-03', 'Cancelled'),  -- both B02 copies out (L13, L03); C01 back 2026-09-06, not collected
+('RES09', 'M05', 'B06', '2026-10-05', 'Pending'),    -- B06: C01 damaged, C02 out on L06
+('RES10', 'M06', 'B12', '2026-10-06', 'Pending'),    -- B12-C01 out on L11
+('RES11', 'M03', 'B03', '2026-10-09', 'Pending'),    -- B03: C01 held for RES07, C02 out on L03
+('RES12', 'M08', 'B13', '2026-10-12', 'Pending'),    -- B13-C01 out on L15
+('RES13', 'M12', 'B12', '2026-10-12', 'Pending'),    -- 2nd in the queue for B12
+('RES14', 'M04', 'B06', '2026-10-14', 'Pending'),    -- 2nd in the queue for B06
+('RES15', 'M11', 'B13', '2026-10-18', 'Pending');    -- 2nd in the queue for B13
 
--- ] Loan_Detail (18 rows)
+-- Loan_Detail (18 rows)
+-- [D4] Renewal_Count is 0 in every row: no loan below had its due date moved,
+-- so no renewal happened (a renewal adds one loan period to the due date, see
+-- Trigger 2). A renewal is shown in the CRUD block (L16).
 
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status, Fine_Amount) VALUES
 ('L01', 'D01', 'B01', 'C01', '2026-01-28', 0, 'None',   0.00),
 ('L01', 'D02', 'B11', 'C01', '2026-01-28', 0, 'None',   0.00),
 ('L02', 'D01', 'B01', 'C02', '2026-03-01', 0, 'None',   0.00),
-('L02', 'D02', 'B02', 'C01', '2026-03-10', 1, 'Paid',   35000.00),
-('L03', 'D01', 'B02', 'C02', NULL,         1, 'Unpaid', 45000.00),
+('L02', 'D02', 'B02', 'C01', '2026-03-10', 0, 'Paid',   35000.00),  -- [D4] was 1
+('L03', 'D01', 'B02', 'C02', NULL,         0, 'Unpaid', 45000.00),  -- [D4] was 1
 ('L03', 'D02', 'B03', 'C02', NULL,         0, 'Unpaid', 45000.00),
 ('L04', 'D01', 'B04', 'C01', '2026-04-12', 0, 'Unpaid', 40000.00),
 ('L05', 'D01', 'B05', 'C01', '2026-05-04', 0, 'Unpaid', 40000.00),
 ('L06', 'D01', 'B06', 'C02', NULL,         0, 'Unpaid', 25000.00),
 ('L07', 'D01', 'B07', 'C01', '2026-06-28', 0, 'None',   0.00),
-('L08', 'D01', 'B08', 'C01', '2026-07-25', 1, 'Unpaid', 50000.00),
+('L08', 'D01', 'B08', 'C01', '2026-07-25', 0, 'Unpaid', 50000.00),  -- [D4] was 1
 ('L09', 'D01', 'B09', 'C02', NULL,         0, 'Unpaid', 40000.00),
 ('L10', 'D01', 'B10', 'C01', '2026-08-05', 0, 'Paid',   25000.00),
 ('L11', 'D01', 'B12', 'C01', NULL,         0, 'Unpaid', 35000.00),
@@ -605,6 +642,10 @@ INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Rene
 
 DROP TRIGGER IF EXISTS trigger_loantransaction_before_insertMember;
 DROP TRIGGER IF EXISTS trg_before_loan_detail_insert_check_copy;
+DROP TRIGGER IF EXISTS trg_loantransaction_before_update;       -- [T1]
+DROP TRIGGER IF EXISTS trg_before_loan_detail_update_check;     -- [T3]
+DROP TRIGGER IF EXISTS trg_staff_before_insert_hierarchy;       -- [T4]
+DROP TRIGGER IF EXISTS trg_staff_before_update_hierarchy;       -- [T4]
 
 DELIMITER $$
 
@@ -658,13 +699,94 @@ BEGIN
     END IF;
 END$$
 
---  Enforces BR02 on Loan_Detail
+-- Trigger 2  [T1] Enforces BR03 on Loan_Transaction (changed due date or member)
+--   Loan duration: an UPDATE may move Due_Date only within the category's loan
+--   period, plus one more period for each renewal of the loan.
+--   Borrowing limit: a loan handed to another member must fit that member's limit.
+CREATE TRIGGER trg_loantransaction_before_update
+BEFORE UPDATE ON Loan_Transaction
+FOR EACH ROW
+BEGIN
+    DECLARE v_loan_period INT DEFAULT NULL;
+    DECLARE v_limit       INT DEFAULT NULL;
+    DECLARE v_renewals    INT DEFAULT 0;
+    DECLARE v_open        INT DEFAULT 0;
+    DECLARE v_moving      INT DEFAULT 0;
+
+    SELECT mc.Loan_Period, mc.Borrowing_Limit
+    INTO v_loan_period, v_limit
+    FROM Member m
+    INNER JOIN Member_Category mc
+        ON m.Member_Type_ID = mc.Member_Type_ID
+    WHERE m.Member_ID = NEW.Member_ID;
+
+    IF NEW.Due_Date <> OLD.Due_Date
+       OR NEW.Borrow_Date <> OLD.Borrow_Date
+       OR NEW.Member_ID <> OLD.Member_ID THEN
+        SELECT COALESCE(MAX(Renewal_Count), 0)
+        INTO v_renewals
+        FROM Loan_Detail
+        WHERE Loan_ID = OLD.Loan_ID;
+
+        IF DATEDIFF(NEW.Due_Date, NEW.Borrow_Date) > v_loan_period * (1 + v_renewals) THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BR03 Violation: Loan duration exceeds the loan period (plus renewals) for this membership category.';
+        END IF;
+    END IF;
+
+    IF NEW.Member_ID <> OLD.Member_ID THEN
+        SELECT COUNT(*)
+        INTO v_open
+        FROM Loan_Detail ld
+        INNER JOIN Loan_Transaction lt
+            ON ld.Loan_ID = lt.Loan_ID
+        WHERE lt.Member_ID = NEW.Member_ID
+          AND ld.Return_Date IS NULL;
+
+        SELECT COUNT(*)
+        INTO v_moving
+        FROM Loan_Detail
+        WHERE Loan_ID = OLD.Loan_ID
+          AND Return_Date IS NULL;
+
+        IF v_open + v_moving > v_limit THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BR03 Violation: Borrowing limit exceeded for this membership category.';
+        END IF;
+    END IF;
+END$$
+
+-- Trigger 3  Enforces BR02 on Loan_Detail (new loan line)
+--   [T2] BR05: a line entered as already returned after the due date must
+--        carry a fine.
+--   [T2] BR03: the borrowing limit is checked on the copies the member really
+--        has out (Trigger 1 only sees the number the loan header claims).
 CREATE TRIGGER trg_before_loan_detail_insert_check_copy
 BEFORE INSERT ON Loan_Detail
 FOR EACH ROW
 BEGIN
     DECLARE v_status VARCHAR(50)  DEFAULT NULL;
     DECLARE v_msg    VARCHAR(128) DEFAULT NULL;
+    DECLARE v_member VARCHAR(20)  DEFAULT NULL;   -- [T2]
+    DECLARE v_due    DATE         DEFAULT NULL;   -- [T2]
+    DECLARE v_limit  INT          DEFAULT NULL;   -- [T2]
+    DECLARE v_open   INT          DEFAULT 0;      -- [T2]
+
+    -- [T2] The loan this line belongs to: who borrows, the due date, the limit
+    SELECT lt.Member_ID, lt.Due_Date, mc.Borrowing_Limit
+    INTO v_member, v_due, v_limit
+    FROM Loan_Transaction lt
+    INNER JOIN Member m
+        ON lt.Member_ID = m.Member_ID
+    INNER JOIN Member_Category mc
+        ON m.Member_Type_ID = mc.Member_Type_ID
+    WHERE lt.Loan_ID = NEW.Loan_ID;
+
+    -- [T2] BR05: returned after the due date, so a fine must be recorded
+    IF NEW.Return_Date IS NOT NULL AND NEW.Return_Date > v_due AND NEW.Fine_Amount = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'BR05 Violation: A copy returned after its due date must carry a fine.';
+    END IF;
 
     IF NEW.Return_Date IS NULL THEN
         SELECT Status INTO v_status
@@ -679,6 +801,121 @@ BEGIN
             SIGNAL SQLSTATE '45000'
                 SET MESSAGE_TEXT = v_msg;
         END IF;
+
+        -- [T2] BR03: copies this member already has out, plus this one
+        SELECT COUNT(*)
+        INTO v_open
+        FROM Loan_Detail ld
+        INNER JOIN Loan_Transaction lt
+            ON ld.Loan_ID = lt.Loan_ID
+        WHERE lt.Member_ID = v_member
+          AND ld.Return_Date IS NULL;
+
+        IF v_open + 1 > v_limit THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BR03 Violation: Borrowing limit exceeded for this membership category.';
+        END IF;
+    END IF;
+END$$
+
+-- Trigger 4  BEFORE UPDATE on Loan_Detail. 
+--   BR05: a copy returned after its due date carries a fine;
+--   BR03: a line that becomes open again (Return_Date set back to NULL) or is
+
+CREATE TRIGGER trg_before_loan_detail_update_check
+BEFORE UPDATE ON Loan_Detail
+FOR EACH ROW
+BEGIN
+    DECLARE v_member VARCHAR(20) DEFAULT NULL;
+    DECLARE v_due    DATE        DEFAULT NULL;
+    DECLARE v_limit  INT         DEFAULT NULL;
+    DECLARE v_open   INT         DEFAULT 0;
+
+    SELECT lt.Member_ID, lt.Due_Date, mc.Borrowing_Limit
+    INTO v_member, v_due, v_limit
+    FROM Loan_Transaction lt
+    INNER JOIN Member m
+        ON lt.Member_ID = m.Member_ID
+    INNER JOIN Member_Category mc
+        ON m.Member_Type_ID = mc.Member_Type_ID
+    WHERE lt.Loan_ID = NEW.Loan_ID;
+
+    IF NEW.Return_Date IS NOT NULL AND NEW.Return_Date > v_due AND NEW.Fine_Amount = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'BR05 Violation: A copy returned after its due date must carry a fine.';
+    END IF;
+
+    IF NEW.Return_Date IS NULL
+       AND (OLD.Return_Date IS NOT NULL OR NEW.Loan_ID <> OLD.Loan_ID) THEN
+        SELECT COUNT(*)
+        INTO v_open
+        FROM Loan_Detail ld
+        INNER JOIN Loan_Transaction lt
+            ON ld.Loan_ID = lt.Loan_ID
+        WHERE lt.Member_ID = v_member
+          AND ld.Return_Date IS NULL
+          AND NOT (ld.Loan_ID = OLD.Loan_ID AND ld.Detail_ID = OLD.Detail_ID);
+
+        IF v_open + 1 > v_limit THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BR03 Violation: Borrowing limit exceeded for this membership category.';
+        END IF;
+    END IF;
+END$$
+
+-- Triggers 5 and 6  [T4] Enforce BR04 on Staff. A hierarchy is a tree: the
+--   "reports to" chain never comes back to where it started, and nobody
+--   supervises themself (the FK alone only checks that the supervisor exists).
+--   Why not a CHECK: MySQL forbids a CHECK on a column used by a foreign key
+--   referential action (Supervisor_ID has ON DELETE SET NULL: error 3823),
+--   and a cycle can only be seen by following the chain through other rows.
+CREATE TRIGGER trg_staff_before_insert_hierarchy
+BEFORE INSERT ON Staff
+FOR EACH ROW
+BEGIN
+    -- A new row has no subordinates yet, so the only possible cycle is itself.
+    IF NEW.Supervisor_ID = NEW.Staff_ID THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_staff_before_update_hierarchy
+BEFORE UPDATE ON Staff
+FOR EACH ROW
+BEGIN
+    DECLARE v_cycle INT DEFAULT 0;
+
+    IF NEW.Supervisor_ID = NEW.Staff_ID THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
+    END IF;
+
+    IF NEW.Supervisor_ID IS NOT NULL
+       AND NOT (NEW.Supervisor_ID <=> OLD.Supervisor_ID) THEN
+        -- Walk up the chain from the new supervisor. Meeting this staff member
+        -- on the way means the new link would close a cycle. The walk ends at
+        -- the top (Supervisor_ID IS NULL) because this trigger keeps the
+        -- hierarchy free of cycles.
+        WITH RECURSIVE chain (Staff_ID, Supervisor_ID) AS (
+            SELECT Staff_ID, Supervisor_ID
+            FROM Staff
+            WHERE Staff_ID = NEW.Supervisor_ID
+            UNION ALL
+            SELECT s.Staff_ID, s.Supervisor_ID
+            FROM Staff s
+            INNER JOIN chain c
+                ON s.Staff_ID = c.Supervisor_ID
+        )
+        SELECT COUNT(*)
+        INTO v_cycle
+        FROM chain
+        WHERE Staff_ID = OLD.Staff_ID;
+
+        IF v_cycle > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'BR04 Violation: This change would create a cycle in the supervision hierarchy.';
+        END IF;
     END IF;
 END$$
 
@@ -686,81 +923,114 @@ DELIMITER ;
 
 
 
---  CRUD for Member
+-- 1. CRUD for Member_Category
+INSERT INTO Member_Category (Member_Type_ID, Type_Name, Borrowing_Limit, Loan_Period)
+VALUES ('MC16', 'Short-Term Research Visitor', 4, 14);
+UPDATE Member_Category
+SET Borrowing_Limit = 5, Loan_Period = 21
+WHERE Member_Type_ID = 'MC16';
+DELETE FROM Member_Category
+WHERE Member_Type_ID = 'MC16';
+-- 2 & 3. CRUD for Member & Member_Phone
 INSERT INTO Member (Member_ID, Member_Type_ID, Full_Name, Email, Identity_Card, Membership_Expiry_Date, Account_Status)
 VALUES ('M16', 'MC01', 'Nguyen Minh Tri', 'nmtri@hcmiu.edu.vn', '079205001016', '2027-08-31', 'Active');
-
+INSERT INTO Member_Phone (Member_ID, Phone)
+VALUES ('M16', '0909998816');
+UPDATE Member_Phone
+SET Phone = '0909998877'
+WHERE Member_ID = 'M16' AND Phone = '0909998816';
+DELETE FROM Member_Phone
+WHERE Member_ID = 'M16' AND Phone = '0909998877';
 UPDATE Member
 SET Account_Status = 'Suspended', Membership_Expiry_Date = '2028-08-31'
 WHERE Member_ID = 'M16';
-
 DELETE FROM Member
 WHERE Member_ID = 'M16';
-
---  CRUD for Staff
-INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email)
-VALUES ('S16', 'S03', 'Pham Hoang Nam', 'Assistant Circulation Librarian', 'phnam@hcmiu.edu.vn');
-
-UPDATE Staff
-SET Position = 'Circulation Librarian', Supervisor_ID = 'S02'
-WHERE Staff_ID = 'S16';
-
-DELETE FROM Staff
-WHERE Staff_ID = 'S16';
-
---  CRUD for Book, Book_Copy & Reservation
+-- 4. CRUD for Category
+INSERT INTO Category (Category_ID, Category_Name, Description)
+VALUES ('CAT16', 'Data Science', 'Big data analytics, data mining, and visualization.');
+UPDATE Category
+SET Description = 'Big data analytics, statistical modeling, and visualization.'
+WHERE Category_ID = 'CAT16';
+DELETE FROM Category
+WHERE Category_ID = 'CAT16';
+-- 5. CRUD for Publisher
+INSERT INTO Publisher (Publisher_ID, Publisher_Name, Address, Contact_Email)
+VALUES ('PUB16', 'Addison-Wesley', 'Boston, MA, USA', 'contact@aw.com');
+UPDATE Publisher
+SET Address = 'Boston, Massachusetts, USA'
+WHERE Publisher_ID = 'PUB16';
+DELETE FROM Publisher
+WHERE Publisher_ID = 'PUB16';
+-- 6. CRUD for Author
+INSERT INTO Author (Author_ID, Author_Name, Biography)
+VALUES ('AUTH19', 'Andrew S. Tanenbaum', 'Professor Emeritus of Computer Science at Vrije Universiteit Amsterdam.');
+UPDATE Author
+SET Biography = 'Author of Modern Operating Systems and Computer Networks.'
+WHERE Author_ID = 'AUTH19';
+DELETE FROM Author
+WHERE Author_ID = 'AUTH19';
+-- 7, 8, 11 & 12. CRUD for Book, Book_Author, Book_Copy & Reservation
 INSERT INTO Book (Book_ID, Category_ID, Publisher_ID, ISBN, Title, Publication_Year)
 VALUES ('B16', 'CAT01', 'PUB01', '978-0262046305', 'Introduction to Algorithms, 4th Edition', 2022);
-
 UPDATE Book
 SET Title = 'Introduction to Algorithms (4th Ed.)', Publication_Year = 2022, Category_ID = 'CAT02'
 WHERE Book_ID = 'B16';
-
+INSERT INTO Book_Author (Book_ID, Author_ID, Author_Order)
+VALUES ('B16', 'AUTH01', 1);
+UPDATE Book_Author
+SET Author_Order = 2
+WHERE Book_ID = 'B16' AND Author_ID = 'AUTH01';
+DELETE FROM Book_Author
+WHERE Book_ID = 'B16' AND Author_ID = 'AUTH01';
 INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes)
 VALUES ('B16', 'C01', 'Shelf A - Row 3', 'Available', 'New'),
        ('B16', 'C02', 'Shelf A - Row 3', 'Available', 'New');
-
 UPDATE Book_Copy
 SET Status = 'Damaged', Condition_Notes = 'Water damage on cover'
 WHERE Book_ID = 'B16' AND Copy_ID = 'C02';
-
+-- [C2] The demo reserves B12, whose only copy is out on loan (B16-C01 is on
+-- the shelf, so B16 is not fully on loan), and then cancels it ('Confirmed'
+-- would mean a copy is held at the desk, and none is).
 INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, Status)
-VALUES ('RES16', 'M02', 'B16', '2026-10-23', 'Pending');
-
+VALUES ('RES16', 'M02', 'B12', '2026-10-23', 'Pending');
 UPDATE Reservation
-SET Status = 'Confirmed'
+SET Status = 'Cancelled'
 WHERE Reservation_ID = 'RES16';
-
 DELETE FROM Reservation
 WHERE Reservation_ID = 'RES16';
-
 DELETE FROM Book_Copy
 WHERE Book_ID = 'B16' AND Copy_ID = 'C02';
-
 DELETE FROM Book_Copy
 WHERE Book_ID = 'B16' AND Copy_ID = 'C01';
-
 DELETE FROM Book
 WHERE Book_ID = 'B16';
-
---  CRUD for Loan_Transaction & Loan_Detail
+-- 9. CRUD for Staff
+INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email)
+VALUES ('S16', 'S03', 'Pham Hoang Nam', 'Assistant Circulation Librarian', 'phnam@hcmiu.edu.vn');
+UPDATE Staff
+SET Position = 'Circulation Librarian', Supervisor_ID = 'S02'
+WHERE Staff_ID = 'S16';
+DELETE FROM Staff
+WHERE Staff_ID = 'S16';
+-- 10 & 13. CRUD for Loan_Transaction & Loan_Detail
 INSERT INTO Loan_Transaction (Loan_ID, Member_ID, Staff_ID, Borrow_Date, Due_Date, Total_Copies_Borrowed)
 VALUES ('L16', 'M04', 'S05', '2026-10-20', '2026-11-03', 1);
-
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status, Fine_Amount)
 VALUES ('L16', 'D01', 'B14', 'C01', NULL, 0, 'None', 0.00);
-
+-- [C1] Renew first, then extend, then return: Trigger 2 allows one more loan
+-- period per renewal, so the due date can move only after Renewal_Count is 1.
+UPDATE Loan_Detail
+SET Renewal_Count = 1
+WHERE Loan_ID = 'L16' AND Detail_ID = 'D01';
 UPDATE Loan_Transaction
 SET Due_Date = '2026-11-17'
 WHERE Loan_ID = 'L16';
-
 UPDATE Loan_Detail
-SET Renewal_Count = 1, Return_Date = '2026-11-10'
+SET Return_Date = '2026-11-10'
 WHERE Loan_ID = 'L16' AND Detail_ID = 'D01';
-
 DELETE FROM Loan_Detail
 WHERE Loan_ID = 'L16' AND Detail_ID = 'D01';
-
 DELETE FROM Loan_Transaction
 WHERE Loan_ID = 'L16';
 
