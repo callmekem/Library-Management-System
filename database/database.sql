@@ -121,7 +121,7 @@ CREATE TABLE Category (
         PRIMARY KEY (Category_ID),
     CONSTRAINT uq_category_name
         UNIQUE (Category_Name),
-    -- [S1] Every table carries a CHECK (section 2.2): a category needs a name.
+    --  Every table carries a CHECK : a category needs a name.
     CONSTRAINT chk_category_name_not_blank
         CHECK (CHAR_LENGTH(TRIM(Category_Name)) > 0)
 ) ENGINE=InnoDB;
@@ -155,7 +155,7 @@ CREATE TABLE Author (
     Biography   TEXT         NULL,
     CONSTRAINT pk_author
         PRIMARY KEY (Author_ID),
-    -- [S2] An author needs a name. Author_Name is not UNIQUE on purpose:
+    --  Author_Name is not UNIQUE on purpose:
     -- two different authors may share a name.
     CONSTRAINT chk_author_name_not_blank
         CHECK (CHAR_LENGTH(TRIM(Author_Name)) > 0)
@@ -585,17 +585,7 @@ INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes
 ('B15', 'C01', 'Shelf G - Row 2', 'Available', 'Brand New - Never Borrowed');
 
 -- Reservation (15 rows)                                                     [D3]
--- Rewritten so that every row agrees with Book_Copy and Loan_Detail:
---   * each reservation was placed while no copy of the title could be lent
---     (every lendable copy out on loan or held for an earlier reservation),
---     as Topic 22 describes: "reservations for a title that is fully on loan";
---   * Confirmed = a copy of that title is held at the desk ('Reserved');
---   * Pending rows are on titles with no Available copy today (2026-10-24);
---   * Cancelled = not collected or withdrawn; the copy went back on the shelf;
---   * no row is Completed: no loan in Loan_Detail starts after a time when
---     every copy of its title was out, so no loan can be a reservation pick-up.
--- Only Active members reserve. These points describe the sample data; the
--- database does not enforce them (they are not among BR01-BR05).
+
 INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, Status) VALUES
 ('RES01', 'M11', 'B11', '2026-01-20', 'Cancelled'),  -- B11-C01 out on L01
 ('RES02', 'M04', 'B04', '2026-03-20', 'Cancelled'),  -- B04-C01 out on L04, B04-C02 lost
@@ -614,9 +604,7 @@ INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, S
 ('RES15', 'M11', 'B13', '2026-10-18', 'Pending');    -- 2nd in the queue for B13
 
 -- Loan_Detail (18 rows)
--- [D4] Renewal_Count is 0 in every row: no loan below had its due date moved,
--- so no renewal happened (a renewal adds one loan period to the due date, see
--- Trigger 2). A renewal is shown in the CRUD block (L16).
+.
 
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status, Fine_Amount) VALUES
 ('L01', 'D01', 'B01', 'C01', '2026-01-28', 0, 'None',   0.00),
