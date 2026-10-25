@@ -604,7 +604,7 @@ INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, S
 ('RES15', 'M11', 'B13', '2026-10-18', 'Pending');    -- 2nd in the queue for B13
 
 -- Loan_Detail (18 rows)
-.
+
 
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status, Fine_Amount) VALUES
 ('L01', 'D01', 'B01', 'C01', '2026-01-28', 0, 'None',   0.00),
