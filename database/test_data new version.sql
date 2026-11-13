@@ -373,7 +373,7 @@ CREATE INDEX idx_author_name                  ON Author (Author_Name);          
  
  
  
---  Member_Category (15 rows)
+
 INSERT INTO Member_Category (Member_Type_ID, Type_Name, Borrowing_Limit, Loan_Period) VALUES
 ('MC01', 'Undergraduate Student', 5, 10),
 ('MC02', 'Postgraduate Student', 8, 15),
@@ -391,7 +391,7 @@ INSERT INTO Member_Category (Member_Type_ID, Type_Name, Borrowing_Limit, Loan_Pe
 ('MC14', 'Retired Faculty', 10, 20),
 ('MC15', 'Honorary Fellow', 20, 19);
  
---  Member (15 rows)
+
 INSERT INTO Member (Member_ID, Member_Type_ID, Full_Name, Email, Identity_Card, Membership_Expiry_Date, Account_Status) VALUES
 ('M01', 'MC01', 'Nguyen Van A', 'NVA@hcmiu.edu.vn', '079205001001', '2027-08-31', 'Active'),
 ('M02', 'MC02', 'Nguyen Van B', 'NVB@hcmiu.edu.vn', '079205001002', '2027-08-31', 'Active'),
@@ -409,7 +409,7 @@ INSERT INTO Member (Member_ID, Member_Type_ID, Full_Name, Email, Identity_Card, 
 ('M14', 'MC11', 'Nguyen Van N ', 'NVN@gmail.com', '079205001014', '2026-04-30', 'Expired'),
 ('M15', 'MC09', 'Nguyen Van O ', 'NVO@alumni.hcmiu.edu.vn', '079205001015', '2027-07-31', 'Locked');
  
--- Member_Phone (16 rows)
+
 INSERT INTO Member_Phone (Member_ID, Phone) VALUES
 ('M01', '0901112201'),
 ('M01', '0988112201'),
@@ -428,7 +428,7 @@ INSERT INTO Member_Phone (Member_ID, Phone) VALUES
 ('M13', '0901112213'),
 ('M14', '0901112214');
  
---  Category (15 rows)
+
 INSERT INTO Category (Category_ID, Category_Name, Description) VALUES
 ('CAT01', 'Computer Science', 'Books related to computing, programming, and algorithms.'),
 ('CAT02', 'Mathematics', 'Calculus, algebra, geometry, and applied mathematics.'),
@@ -446,7 +446,7 @@ INSERT INTO Category (Category_ID, Category_Name, Description) VALUES
 ('CAT14', 'Business & Management', 'Leadership, marketing, and corporate strategy.'),
 ('CAT15', 'Political Science', 'Government structures, international relations, and public policy.');
  
--- Publisher (15 rows)
+
 INSERT INTO Publisher (Publisher_ID, Publisher_Name, Address, Contact_Email) VALUES
 ('PUB01', 'MIT Press', 'Cambridge, MA, USA', 'info@mitpress.mit.edu'),
 ('PUB02', 'Prentice Hall', 'Upper Saddle River, NJ, USA', 'contact@prenticehall.com'),
@@ -464,7 +464,7 @@ INSERT INTO Publisher (Publisher_ID, Publisher_Name, Address, Contact_Email) VAL
 ('PUB14', 'Macmillan', 'London, UK', 'contact@macmillan.com'),
 ('PUB15', 'Hachette Livre', 'Paris, France', 'contact@hachette.com');
  
--- Author (18 rows)
+
 INSERT INTO Author (Author_ID, Author_Name, Biography) VALUES
 ('AUTH01', 'Thomas H. Cormen', 'Professor of computer science at Dartmouth College.'),
 ('AUTH02', 'Robert C. Martin', 'Software engineer, best-selling author, known as Uncle Bob.'),
@@ -485,7 +485,7 @@ INSERT INTO Author (Author_ID, Author_Name, Biography) VALUES
 ('AUTH17', 'Ronald L. Rivest', 'Cryptographer and professor at MIT, co-inventor of RSA.'),
 ('AUTH18', 'Clifford Stein', 'Professor of industrial engineering and computer science at Columbia University.');
  
--- Book (15 rows)
+
 INSERT INTO Book (Book_ID, Category_ID, Publisher_ID, ISBN, Title, Publication_Year) VALUES
 ('B01', 'CAT01', 'PUB01', '978-0262033848', 'Introduction to Algorithms', 2009),
 ('B02', 'CAT01', 'PUB01', '978-0262524531', 'Algorithms Unlocked', 2013),
@@ -503,7 +503,7 @@ INSERT INTO Book (Book_ID, Category_ID, Publisher_ID, ISBN, Title, Publication_Y
 ('B14', 'CAT10', 'PUB11', '978-0486280615', 'The Adventures of Tom Sawyer', 1876),
 ('B15', 'CAT10', 'PUB12', '978-0451524935', '1984', 1949);
  
---  Book_Author (18 rows)
+
 INSERT INTO Book_Author (Book_ID, Author_ID, Author_Order) VALUES
 ('B01', 'AUTH01', 1),
 ('B01', 'AUTH16', 2),
@@ -524,7 +524,7 @@ INSERT INTO Book_Author (Book_ID, Author_ID, Author_Order) VALUES
 ('B14', 'AUTH14', 1),
 ('B15', 'AUTH15', 1);
  
---  Staff (15 rows)
+
 INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email) VALUES
 ('S01', NULL,  'Dr. Nguyen Thi Minh Khai', 'Chief Librarian', 'ntmkhai@hcmiu.edu.vn'),
 ('S02', 'S01', 'Tran Van Quan', 'Deputy Chief Librarian', 'tvquan@hcmiu.edu.vn'),
@@ -542,7 +542,7 @@ INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email) VALUES
 ('S14', 'S04', 'Cao Thai Son', 'Acquisitions Specialist', 'ctson@hcmiu.edu.vn'),
 ('S15', 'S02', 'Huynh Thuc Khang', 'IT Systems Librarian', 'htkhang@hcmiu.edu.vn');
  
---  Loan_Transaction (15 rows)
+
  
 INSERT INTO Loan_Transaction (Loan_ID, Member_ID, Staff_ID, Borrow_Date, Due_Date, Total_Copies_Borrowed) VALUES
 ('L01', 'M01', 'S05', '2026-01-15', '2026-01-29', 2),
@@ -561,7 +561,7 @@ INSERT INTO Loan_Transaction (Loan_ID, Member_ID, Staff_ID, Borrow_Date, Due_Dat
 ('L14', 'M12', 'S08', '2026-08-22', '2026-09-05', 1),
 ('L15', 'M13', 'S09', '2026-10-10', '2026-11-09', 1);
  
--- Book_Copy (21 rows)
+
  
 INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes) VALUES
 ('B01', 'C01', 'Shelf A - Row 1', 'Available', 'Good condition'),
@@ -586,7 +586,7 @@ INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes
 ('B14', 'C01', 'Shelf G - Row 1', 'Available', 'Brand New - Never Borrowed'),
 ('B15', 'C01', 'Shelf G - Row 2', 'Available', 'Brand New - Never Borrowed');
  
--- Reservation (15 rows)
+
 INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, Status) VALUES
 ('RES01', 'M11', 'B11', '2026-01-20', 'Cancelled'),  -- B11-C01 out on L01
 ('RES02', 'M04', 'B04', '2026-03-20', 'Cancelled'),  -- B04-C01 out on L04, B04-C02 lost
@@ -604,7 +604,7 @@ INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, S
 ('RES14', 'M04', 'B06', '2026-10-14', 'Pending'),    -- 2nd in the queue for B06
 ('RES15', 'M11', 'B13', '2026-10-18', 'Pending');    -- 2nd in the queue for B13
  
--- Loan_Detail (18 rows)
+
  
  
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status, Fine_Amount) VALUES
