@@ -645,7 +645,7 @@ BEGIN
     DECLARE v_status       VARCHAR(20); -- account status
     DECLARE v_expiry       DATE; -- this is for membership_expiry_date
     DECLARE v_limit        INT; -- borrow limit
-    DECLARE v_loan_period  INT; -- loan _ period
+    DECLARE v_loan_period  INT; 
     DECLARE v_active_loans INT;
  
     SELECT m.Account_Status, m.Membership_Expiry_Date,
@@ -742,7 +742,7 @@ BEGIN
         END IF;
  
         -- BR02: one physical copy is on at most one open loan line. Status
-        -- is set by hand, so the trigger also looks at the open lines.
+
         IF EXISTS (SELECT 1
                    FROM Loan_Detail
                    WHERE Book_ID = NEW.Book_ID
@@ -847,7 +847,7 @@ CREATE TRIGGER trg_staff_before_insert_hierarchy
 BEFORE INSERT ON Staff
 FOR EACH ROW
 BEGIN
-    -- A new row has no subordinates yet, so the only possible cycle is itself.
+  
     IF NEW.Supervisor_ID = NEW.Staff_ID THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
@@ -896,15 +896,11 @@ END$$
 DELIMITER ;
  
  
- 
--- =====================================================================
 -- UPDATE STATEMENTS USED BY THE APPLICATION
 -- Requirement 2.3: "at least one INSERT, one UPDATE and one DELETE for
 -- each main table".
---
--- Main tables (our reading of the requirement): the 11 tables that map an
--- entity set of the ER diagram. Each one is edited through its own screen
--- in the Java application.
+-- Main tables: the 11 tables that map an
+-- entity set of the ER diagram. Each one is edited through its own screen in the Java application.
 --   Catalogue    Category, Publisher, Author, Book, Book_Copy
 --   Members      Member_Category, Member, Staff
 --   Circulation  Reservation, Loan_Transaction, Loan_Detail
@@ -917,12 +913,13 @@ DELIMITER ;
 -- data above stays unchanged and the script can run twice in a row.
 -- In the Java application every literal value below becomes a ?
 -- parameter of a PreparedStatement.
--- =====================================================================
 
 
 -- ---------------------------------------------------------------------
--- Main table 1: Category                              (Category screen)
+-- Main table 1: Category                             
 -- ---------------------------------------------------------------------
+
+
 -- INSERT: add a new subject
 INSERT INTO Category (Category_ID, Category_Name, Description)
 VALUES ('CAT16', 'Data Science', 'Big data analytics, data mining, and visualization.');
@@ -939,7 +936,7 @@ WHERE Category_ID = 'CAT16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 2: Publisher                            (Publisher screen)
+-- Main table 2: Publisher                            
 -- ---------------------------------------------------------------------
 -- INSERT: add a publisher
 INSERT INTO Publisher (Publisher_ID, Publisher_Name, Address, Contact_Email)
@@ -957,7 +954,7 @@ WHERE Publisher_ID = 'PUB16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 3: Author                                  (Author screen)
+-- Main table 3: Author                                 
 -- ---------------------------------------------------------------------
 -- INSERT: add an author
 INSERT INTO Author (Author_ID, Author_Name, Biography)
@@ -975,7 +972,7 @@ WHERE Author_ID = 'AUTH19';
 
 
 -- ---------------------------------------------------------------------
--- Main table 4: Book, with its authors in Book_Author       (Book screen)
+-- Main table 4: Book, with its authors in Book_Author     
 -- ---------------------------------------------------------------------
 -- INSERT: catalogue a new title, then link its authors
 -- (Leiserson is entered at position 3 by mistake)
@@ -1005,7 +1002,7 @@ WHERE Book_ID = 'B16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 5: Book_Copy                                (Copy screen)
+-- Main table 5: Book_Copy                                
 -- ---------------------------------------------------------------------
 -- INSERT: add a second copy of an existing title (B15 '1984')
 INSERT INTO Book_Copy (Book_ID, Copy_ID, Shelf_Location, Status, Condition_Notes)
@@ -1023,7 +1020,7 @@ WHERE Book_ID = 'B15' AND Copy_ID = 'C02';
 
 
 -- ---------------------------------------------------------------------
--- Main table 6: Member_Category               (Membership category screen)
+-- Main table 6: Member_Category            
 -- ---------------------------------------------------------------------
 -- INSERT: add a membership category
 INSERT INTO Member_Category (Member_Type_ID, Type_Name, Borrowing_Limit, Loan_Period)
@@ -1041,7 +1038,7 @@ WHERE Member_Type_ID = 'MC16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 7: Member, with its phones in Member_Phone   (Member screen)
+-- Main table 7: Member, with its phones in Member_Phone   
 -- ---------------------------------------------------------------------
 -- INSERT: register a new member and record a phone number
 INSERT INTO Member (Member_ID, Member_Type_ID, Full_Name, Email, Identity_Card, Membership_Expiry_Date, Account_Status)
@@ -1070,7 +1067,7 @@ WHERE Member_ID = 'M16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 8: Staff                                    (Staff screen)
+-- Main table 8: Staff                                
 -- ---------------------------------------------------------------------
 -- INSERT: add a staff member under the Head of Circulation (S03)
 INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email)
@@ -1089,7 +1086,7 @@ WHERE Staff_ID = 'S16';
 
 
 -- ---------------------------------------------------------------------
--- Main table 9: Reservation                        (Reservation screen)
+-- Main table 9: Reservation                     
 -- ---------------------------------------------------------------------
 -- INSERT: M02 reserves B12, whose only copy is out on loan L11
 -- (the Java application checks that the title is fully on loan)
@@ -1148,10 +1145,8 @@ WHERE Loan_ID = 'L16';
 
 -- =====================================================================
 -- TRANSACTIONS
--- Requirement 2.3: "at least one operation that changes two tables
--- together and therefore runs inside a transaction with COMMIT and
--- ROLLBACK". Either every change of the operation is kept (COMMIT) or
--- none is (ROLLBACK).
+-- Requirement 2.3: "at least one operation that changes two tables  together and therefore runs inside a transaction with COMMIT and
+-- ROLLBACK". Either every change of the operation is kept (COMMIT) or none is (ROLLBACK).
 -- =====================================================================
 
 --  TRANSACTION 1 (COMMIT): Atomic Book Checkout across 3 tables
@@ -1169,7 +1164,10 @@ SET Status = 'Borrowed',
 WHERE Book_ID = 'B14' AND Copy_ID = 'C01';
  
 COMMIT;
- 
+
+
+
+
 --  TRANSACTION 2 (ROLLBACK): Cancelled Return & Fine Payment on L03
 START TRANSACTION;
  
@@ -1188,7 +1186,7 @@ UPDATE Book_Copy
 SET Status = 'Available'
 WHERE Book_ID = 'B02' AND Copy_ID = 'C02';
  
--- 4. Payment gateway reports FAILURE -> undo changes to both tables (Atomicity)
+-- 4. Payment gateway reports FAILURE so undo changes to both tables (Atomicity)
 ROLLBACK;
  
 -- Restore baseline state for ('B14', 'C01') and L17 so sample data stays clean
