@@ -1,10 +1,6 @@
-
-
 -- PROJECT:     Topic 22 - Library Management System
 -- DBMS:        MySQL 8.4 LTS | Tool: MySQL Workbench
- 
- 
- 
+
 SET NAMES utf8mb4;
 SET SESSION sql_mode = 'STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
  
@@ -58,7 +54,7 @@ CREATE TABLE Member_Category (
     CONSTRAINT unique_Member_Category_TypeName
         UNIQUE (Type_Name),
     CONSTRAINT check_MemberCategoryLimit
-        CHECK (Borrowing_Limit BETWEEN 1 AND 20  AND Loan_Period BETWEEN 7 AND 20) -- each Member category can borrow difference limit and difference loan
+        CHECK (Borrowing_Limit BETWEEN 1 AND 20  AND Loan_Period BETWEEN 7 AND 20) 
 ) ENGINE=InnoDB;
  
 -- table 2  Member
@@ -155,7 +151,6 @@ CREATE TABLE Author (
     Biography   TEXT         NULL,
     CONSTRAINT pk_author
         PRIMARY KEY (Author_ID),
-        -- author name is not unique because some author may share the name
     CONSTRAINT chk_author_name_not_blank
         CHECK (CHAR_LENGTH(TRIM(Author_Name)) > 0)
 ) ENGINE=InnoDB;
