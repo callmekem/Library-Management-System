@@ -929,33 +929,6 @@ BEGIN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
     END IF;
- 
-    IF NEW.Supervisor_ID IS NOT NULL
-       AND NOT (NEW.Supervisor_ID <=> OLD.Supervisor_ID) THEN
-        -- Walk up the chain from the new supervisor. Meeting this staff member
-        -- on the way means the new link would close a cycle. The walk ends at
-        -- the top (Supervisor_ID IS NULL) because this trigger keeps the
-        -- hierarchy free of cycles.
-        WITH RECURSIVE chain (Staff_ID, Supervisor_ID) AS (
-            SELECT Staff_ID, Supervisor_ID
-            FROM Staff
-            WHERE Staff_ID = NEW.Supervisor_ID
-            UNION ALL
-            SELECT s.Staff_ID, s.Supervisor_ID
-            FROM Staff s
-            INNER JOIN chain c
-                ON s.Staff_ID = c.Supervisor_ID
-        )
-        SELECT COUNT(*)
-        INTO v_cycle
-        FROM chain
-        WHERE Staff_ID = OLD.Staff_ID;
- 
-        IF v_cycle > 0 THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'BR04 Violation: This change would create a cycle in the supervision hierarchy.';
-        END IF;
-    END IF;
 END$$
  
 DELIMITER ;
