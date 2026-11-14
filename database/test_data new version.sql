@@ -2,6 +2,9 @@
 
 -- PROJECT:     Topic 22 - Library Management System
 -- DBMS:        MySQL 8.4 LTS | Tool: MySQL Workbench
+-- MySQL-specific parts: ENGINE=InnoDB, the expression default
+--   DEFAULT (CURRENT_DATE), DELIMITER and the trigger syntax (DECLARE,
+--   SIGNAL SQLSTATE '45000'), and DATEDIFF and GREATEST in the views.
  
  
  
@@ -37,7 +40,7 @@ USE library_management_db;
 --         Trigger 2 (limit on the copies really out),
 --         Trigger 3 (loan line re-opened or moved)
 --   BR04  FK FK_staffSupervisor (NULL = top of the hierarchy);
---         Triggers 4 and 5 (nobody supervises themself, no cycle)
+--         Triggers 4 and 5 (nobody supervises themself)
 --   BR05  Payment_Status in every Loan_Detail row; CHECK
 --         check_loandetail_paymentstatus; Fine_Amount from view Loan_Detail_Fine;
 --         Triggers 2 and 3 (a copy returned late carries a fine)
@@ -429,17 +432,17 @@ INSERT INTO Member (Member_ID, Member_Type_ID, Full_Name, Email, Identity_Card, 
 ('M02', 'MC02', 'Nguyen Van B', 'NVB@hcmiu.edu.vn', '079205001002', '2027-08-31', 'Active'),
 ('M03', 'MC03', 'Nguyen Van C', 'NVC@hcmiu.edu.vn', '079205001003', '2027-12-31', 'Active'),
 ('M04', 'MC01', 'Nguyen Van D', 'NVD@hcmiu.edu.vn', '079205001004', '2027-08-31', 'Active'),
-('M05', 'MC04', 'Nguyen Van E ', 'NVE@hcmiu.edu.vn', '079205001005', '2028-06-30', 'Active'),
-('M06', 'MC05', 'Nguyen Van F ', 'NVF@hcmiu.edu.vn', '079205001006', '2027-05-15', 'Active'),
-('M07', 'MC01', 'Nguyen Van G ', 'NVG@hcmiu.edu.vn', '079205001007', '2027-08-31', 'Active'),
-('M08', 'MC02', 'Nguyen Van H ', 'NVH@hcmiu.edu.vn', '079205001008', '2027-09-30', 'Active'),
-('M09', 'MC08', 'Nguyen Van I ', 'NVI@hcmiu.edu.vn', '079205001009', '2027-03-31', 'Suspended'),
-('M10', 'MC04', 'Nguyen Van J ', 'NVJ@hcmiu.edu.vn', '079205001010', '2028-12-31', 'Active'),
-('M11', 'MC07', 'Nguyen Van K ', 'NVK@hcmiu.edu.vn', '079205001011', '2027-10-31', 'Active'),
-('M12', 'MC10', 'Nguyen Van L ', 'NVL@hcmiu.edu.vn', '079205001012', '2027-01-31', 'Active'),
-('M13', 'MC03', 'Nguyen Van M ', 'NVM@hcmiu.edu.vn', '079205001013', '2027-11-30', 'Active'),
-('M14', 'MC11', 'Nguyen Van N ', 'NVN@gmail.com', '079205001014', '2026-04-30', 'Expired'),
-('M15', 'MC09', 'Nguyen Van O ', 'NVO@alumni.hcmiu.edu.vn', '079205001015', '2027-07-31', 'Locked');
+('M05', 'MC04', 'Nguyen Van E', 'NVE@hcmiu.edu.vn', '079205001005', '2028-06-30', 'Active'),
+('M06', 'MC05', 'Nguyen Van F', 'NVF@hcmiu.edu.vn', '079205001006', '2027-05-15', 'Active'),
+('M07', 'MC01', 'Nguyen Van G', 'NVG@hcmiu.edu.vn', '079205001007', '2027-08-31', 'Active'),
+('M08', 'MC02', 'Nguyen Van H', 'NVH@hcmiu.edu.vn', '079205001008', '2027-09-30', 'Active'),
+('M09', 'MC08', 'Nguyen Van I', 'NVI@hcmiu.edu.vn', '079205001009', '2027-03-31', 'Suspended'),
+('M10', 'MC04', 'Nguyen Van J', 'NVJ@hcmiu.edu.vn', '079205001010', '2028-12-31', 'Active'),
+('M11', 'MC07', 'Nguyen Van K', 'NVK@hcmiu.edu.vn', '079205001011', '2027-10-31', 'Active'),
+('M12', 'MC10', 'Nguyen Van L', 'NVL@hcmiu.edu.vn', '079205001012', '2027-01-31', 'Active'),
+('M13', 'MC03', 'Nguyen Van M', 'NVM@hcmiu.edu.vn', '079205001013', '2027-11-30', 'Active'),
+('M14', 'MC11', 'Nguyen Van N', 'NVN@gmail.com', '079205001014', '2026-04-30', 'Expired'),
+('M15', 'MC09', 'Nguyen Van O', 'NVO@alumni.hcmiu.edu.vn', '079205001015', '2027-07-31', 'Locked');
  
 -- Member_Phone (16 rows)
 INSERT INTO Member_Phone (Member_ID, Phone) VALUES
@@ -575,23 +578,27 @@ INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email) VALUES
 ('S15', 'S02', 'Huynh Thuc Khang', 'IT Systems Librarian', 'htkhang@hcmiu.edu.vn');
  
 --  Loan_Transaction (15 rows)
+-- Trigger 1 allows a Due_Date of at most Borrow_Date + the Loan_Period of the
+-- member's category, and most loans below use that full period (MC01 10 days,
+-- MC02 15, MC03 and MC04 20, MC05 18, MC08 7). L13 and L14 are shorter loans.
+-- L12 was renewed once, which adds one more period (Renewal_Count in Loan_Detail).
  
 INSERT INTO Loan_Transaction (Loan_ID, Member_ID, Staff_ID, Borrow_Date, Due_Date) VALUES
-('L01', 'M01', 'S05', '2026-01-15', '2026-01-29'),
-('L02', 'M02', 'S05', '2026-02-10', '2026-03-03'),
-('L03', 'M01', 'S06', '2026-09-01', '2026-09-15'),
-('L04', 'M03', 'S06', '2026-03-05', '2026-04-04'),
-('L05', 'M04', 'S07', '2026-04-12', '2026-04-26'),
-('L06', 'M01', 'S07', '2026-09-10', '2026-09-24'),
-('L07', 'M05', 'S08', '2026-05-20', '2026-07-04'),
-('L08', 'M06', 'S08', '2026-06-15', '2026-07-15'),
-('L09', 'M07', 'S09', '2026-09-05', '2026-09-19'),
-('L10', 'M08', 'S09', '2026-07-10', '2026-07-31'),
-('L11', 'M09', 'S05', '2026-09-12', '2026-09-26'),  -- M09 was Active on 2026-09-12; suspended later for this overdue loan
-('L12', 'M10', 'S06', '2026-08-01', '2026-09-15'),
+('L01', 'M01', 'S05', '2026-01-15', '2026-01-25'),
+('L02', 'M02', 'S05', '2026-02-10', '2026-02-25'),
+('L03', 'M01', 'S06', '2026-09-01', '2026-09-11'),
+('L04', 'M03', 'S06', '2026-03-05', '2026-03-25'),
+('L05', 'M04', 'S07', '2026-04-12', '2026-04-22'),
+('L06', 'M01', 'S07', '2026-09-10', '2026-09-20'),
+('L07', 'M05', 'S08', '2026-05-20', '2026-06-09'),
+('L08', 'M06', 'S08', '2026-06-15', '2026-07-03'),
+('L09', 'M07', 'S09', '2026-09-05', '2026-09-15'),
+('L10', 'M08', 'S09', '2026-07-10', '2026-07-25'),
+('L11', 'M09', 'S05', '2026-09-12', '2026-09-19'),  -- M09 was Active on 2026-09-12; suspended later for this overdue loan
+('L12', 'M10', 'S06', '2026-08-01', '2026-09-10'),  -- 20 days, renewed once for 20 more
 ('L13', 'M11', 'S07', '2026-08-18', '2026-09-01'),
 ('L14', 'M12', 'S08', '2026-08-22', '2026-09-05'),
-('L15', 'M13', 'S09', '2026-10-10', '2026-11-09');
+('L15', 'M13', 'S09', '2026-10-10', '2026-10-30');
  
 -- Book_Copy (21 rows)
 -- Condition_Notes record only the physical state of a copy, on one scale:
@@ -658,24 +665,26 @@ INSERT INTO Reservation (Reservation_ID, Member_ID, Book_ID, Reservation_Date, S
 -- The fine of a line is not stored: the view Loan_Detail_Fine computes it
 -- (5,000 VND per day late). Payment_Status says whether that fine is
 -- Unpaid, Paid or Waived, and is 'None' for a copy returned on time.
+-- Copies still out (Return_Date NULL) were already overdue when this data was
+-- entered, so they are marked 'Unpaid'; L15 was not due yet, so it is 'None'.
  
 INSERT INTO Loan_Detail (Loan_ID, Detail_ID, Book_ID, Copy_ID, Return_Date, Renewal_Count, Payment_Status) VALUES
-('L01', 'D01', 'B01', 'C01', '2026-01-28', 0, 'None'),
-('L01', 'D02', 'B11', 'C01', '2026-01-28', 0, 'None'),
-('L02', 'D01', 'B01', 'C02', '2026-03-01', 0, 'None'),
-('L02', 'D02', 'B02', 'C01', '2026-03-10', 0, 'Paid'),
+('L01', 'D01', 'B01', 'C01', '2026-01-24', 0, 'None'),
+('L01', 'D02', 'B11', 'C01', '2026-01-24', 0, 'None'),
+('L02', 'D01', 'B01', 'C02', '2026-02-23', 0, 'None'),
+('L02', 'D02', 'B02', 'C01', '2026-03-04', 0, 'Paid'),     -- 7 days late: 35,000 VND
 ('L03', 'D01', 'B02', 'C02', NULL,         0, 'Unpaid'),
 ('L03', 'D02', 'B03', 'C02', NULL,         0, 'Unpaid'),
-('L04', 'D01', 'B04', 'C01', '2026-04-12', 0, 'Unpaid'),
-('L05', 'D01', 'B05', 'C01', '2026-05-04', 0, 'Unpaid'),
+('L04', 'D01', 'B04', 'C01', '2026-04-02', 0, 'Unpaid'),   -- 8 days late: 40,000 VND
+('L05', 'D01', 'B05', 'C01', '2026-04-30', 0, 'Unpaid'),   -- 8 days late: 40,000 VND
 ('L06', 'D01', 'B06', 'C02', NULL,         0, 'Unpaid'),
-('L07', 'D01', 'B07', 'C01', '2026-06-28', 0, 'None'),
-('L08', 'D01', 'B08', 'C01', '2026-07-25', 0, 'Unpaid'),
+('L07', 'D01', 'B07', 'C01', '2026-06-03', 0, 'None'),
+('L08', 'D01', 'B08', 'C01', '2026-07-13', 0, 'Unpaid'),   -- 10 days late: 50,000 VND
 ('L09', 'D01', 'B09', 'C02', NULL,         0, 'Unpaid'),
-('L10', 'D01', 'B10', 'C01', '2026-08-05', 0, 'Paid'),
+('L10', 'D01', 'B10', 'C01', '2026-07-30', 0, 'Paid'),     -- 5 days late: 25,000 VND
 ('L11', 'D01', 'B12', 'C01', NULL,         0, 'Unpaid'),
-('L12', 'D01', 'B01', 'C01', '2026-09-10', 0, 'None'),
-('L13', 'D01', 'B02', 'C01', '2026-09-06', 0, 'Waived'),
+('L12', 'D01', 'B01', 'C01', '2026-09-10', 1, 'None'),     -- renewed once, returned on the due date
+('L13', 'D01', 'B02', 'C01', '2026-09-06', 0, 'Waived'),   -- 5 days late: 25,000 VND, waived
 ('L14', 'D01', 'B03', 'C01', '2026-09-04', 0, 'None'),
 ('L15', 'D01', 'B13', 'C01', NULL,         0, 'None');
  
@@ -686,7 +695,7 @@ DROP TRIGGER IF EXISTS trg_before_loan_detail_insert_check_copy;
 DROP TRIGGER IF EXISTS trg_before_loan_detail_update_check;
 DROP TRIGGER IF EXISTS trg_staff_before_insert_hierarchy;
 DROP TRIGGER IF EXISTS trg_staff_before_update_hierarchy;
- 
+
 DELIMITER $$
  
 -- Trigger 1  Enforces BR03 on Loan_Transaction
@@ -776,7 +785,7 @@ BEGIN
     -- BR05: returned after the due date, so a fine must be recorded
     -- (Unpaid, Paid or Waived); returned on time, so no fine (None).
     -- The amount itself is computed by the view Loan_Detail_Fine.
-    IF NEW.Return_Date IS NOT NULL AND NEW.Return_Date > v_due AND NEW.Payment_Status = 'None' THEN -- người ta chưa trả tiền
+    IF NEW.Return_Date IS NOT NULL AND NEW.Return_Date > v_due AND NEW.Payment_Status = 'None' THEN -- trả trễ mà không ghi nhận phạt
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'BR05 Violation: A copy returned after its due date must carry a fine (Unpaid, Paid or Waived).';
     END IF;
@@ -902,17 +911,12 @@ BEGIN
     END IF;
 END$$
  
--- Triggers 4 and 5  Enforce BR04 on Staff. A hierarchy is a tree: the
---   "reports to" chain never comes back to where it started, and nobody
---   supervises themself (the FK alone only checks that the supervisor exists).
---   Why not a CHECK: MySQL forbids a CHECK on a column used by a foreign key
---   referential action (Supervisor_ID has ON DELETE SET NULL: error 3823),
---   and a cycle can only be seen by following the chain through other rows.
+-- Triggers 4 and 5  Enforce BR04 on Staff: nobody supervises themself
+--   (the FK alone only checks that the supervisor exists).
 CREATE TRIGGER trg_staff_before_insert_hierarchy
 BEFORE INSERT ON Staff
 FOR EACH ROW
 BEGIN
-    -- A new row has no subordinates yet, so the only possible cycle is itself.
     IF NEW.Supervisor_ID = NEW.Staff_ID THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
@@ -923,14 +927,12 @@ CREATE TRIGGER trg_staff_before_update_hierarchy
 BEFORE UPDATE ON Staff
 FOR EACH ROW
 BEGIN
-    DECLARE v_cycle INT DEFAULT 0;
- 
     IF NEW.Supervisor_ID = NEW.Staff_ID THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'BR04 Violation: A staff member cannot be their own supervisor.';
     END IF;
 END$$
- 
+
 DELIMITER ;
  
  
@@ -946,16 +948,6 @@ DELIMITER ;
 --   Catalogue    Category, Publisher, Author, Book, Book_Copy
 --   Members      Member_Category, Member, Staff
 --   Circulation  Reservation, Loan_Transaction, Loan_Detail
--- The other 2 tables come from mapping rules and are edited inside the
--- screen of their parent table, so their statements sit in that block:
---   Book_Author   M:N relationship Written_By   -> Book block
---   Member_Phone  multivalued attribute Phone   -> Member block
---
--- Each block adds a demo row, changes it, then deletes it, so the sample
--- data above stays unchanged and the script can run twice in a row.
--- In the Java application every literal value below becomes a ?
--- parameter of a PreparedStatement.
--- =====================================================================
 
 
 -- ---------------------------------------------------------------------
@@ -1115,7 +1107,7 @@ INSERT INTO Staff (Staff_ID, Supervisor_ID, Full_Name, Position, Email)
 VALUES ('S16', 'S03', 'Pham Hoang Nam', 'Assistant Circulation Librarian', 'phnam@hcmiu.edu.vn');
 
 -- UPDATE: transfer to the reference team under S02
--- (Trigger 5 checks that the new supervisor chain has no cycle)
+-- (Trigger 5 checks that S16 is not made their own supervisor)
 UPDATE Staff
 SET Position = 'Reference Librarian', Supervisor_ID = 'S02'
 WHERE Staff_ID = 'S16';
