@@ -1,5 +1,3 @@
-
-
 -- PROJECT:     Topic 22 - Library Management System
 -- DBMS:        MySQL 8.4 LTS | Tool: MySQL Workbench
 -- MySQL-specific parts: ENGINE=InnoDB, the expression default
